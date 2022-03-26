@@ -27,3 +27,12 @@ func (s *StudentRepository) FindById(id int) (student entities.Student, err erro
 	err = database.GetDB().Where("id = ?", id).Find(&student).Error
 	return
 }
+func (s *StudentRepository) DeleteById(id int) (student entities.Student, err error) {
+	student, errFind := s.FindById(id)
+	if errFind != nil {
+		return student, errFind
+	} else {
+		err = database.GetDB().Where("id = ?", id).Delete(&student).Error
+		return student, nil
+	}
+}
