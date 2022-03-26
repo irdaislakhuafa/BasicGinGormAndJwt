@@ -1,9 +1,9 @@
 package entities
 
-import "gorm.io/gorm"
+import (
+	"github.com/irdaislakhuafa/BasicGinGormAndJwt/database"
+)
 
-var database *gorm.DB
-
-func Setup() {
-
+func Setup(list ...interface{}) {
+	database.GetDB().AutoMigrate(list...)
 }
