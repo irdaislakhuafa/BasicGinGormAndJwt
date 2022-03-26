@@ -13,6 +13,7 @@ func (app *AppRouter) Run() {
 	studentController := controllers.StudentController{}
 
 	app.group.GET("/students", studentController.GetAll)
+	app.group.POST("/students", studentController.Created)
 }
 func (app *AppRouter) SetGroup(group *gin.RouterGroup) {
 	app.group = group
