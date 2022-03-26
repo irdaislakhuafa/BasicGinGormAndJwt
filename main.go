@@ -4,6 +4,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/irdaislakhuafa/BasicGinGormAndJwt/database"
 	"github.com/irdaislakhuafa/BasicGinGormAndJwt/entities"
+	"github.com/irdaislakhuafa/BasicGinGormAndJwt/repositories"
+	"github.com/irdaislakhuafa/BasicGinGormAndJwt/routers"
 	"github.com/irdaislakhuafa/BasicGinGormAndJwt/utils"
 )
 
@@ -18,6 +20,18 @@ func main() {
 	con.Setup()
 
 	entities.Setup(&entities.Student{})
+
+	router.Use(func(ctx *gin.Context) { // middleware
+		studentRepository := &repositories.StudentRepository{}
+		studentRepository.SetDB(database.GetDB())
+
+		ctx.Set("studentRepository", studentRepository)
+		ctx.Next()
+	})
+
+	v1 := routers.AppRouter{}
+	v1.SetGroup(router.Group("/v1"))
+	v1.Run()
 
 	router.Run(":" + options.AppPort)
 }
