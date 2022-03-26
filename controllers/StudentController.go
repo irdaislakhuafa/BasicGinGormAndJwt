@@ -3,7 +3,6 @@ package controllers
 import (
 	"log"
 	"net/http"
-	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/irdaislakhuafa/BasicGinGormAndJwt/entities"
@@ -59,8 +58,6 @@ func (s *StudentController) Created(ReqAndRes *gin.Context) {
 	}()
 
 	err := ReqAndRes.ShouldBindJSON(&studentDto)
-	studentDto.Nim = strings.Trim(studentDto.Nim, " ")
-	studentDto.Name = strings.Trim(studentDto.Name, " ")
 
 	if err != nil {
 		response = &utils.ResponseMessage{
@@ -83,7 +80,17 @@ func (s *StudentController) Created(ReqAndRes *gin.Context) {
 			ReqAndRes.JSON(response.StatusCode, response)
 			return
 		} else {
-			savedStudent, _ := studentRepository.Save(&entities.Student{Nim: studentDto.Nim, Name: studentDto.Name})
+			savedStudent, err := studentRepository.Save(&entities.Student{Nim: studentDto.Nim, Name: studentDto.Name})
+
+			if err != nil {
+				response = &utils.ResponseMessage{
+					StatusCode: http.StatusBadRequest,
+					Error:      err.Error(),
+					Data:       nil,
+				}
+				ReqAndRes.JSON(response.StatusCode, response)
+				return
+			}
 			response = &utils.ResponseMessage{
 				StatusCode: http.StatusOK,
 				Error:      nil,
