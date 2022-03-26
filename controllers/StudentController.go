@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"errors"
 	"log"
 	"net/http"
 
@@ -105,7 +106,7 @@ func (*StudentController) Created(ReqAndRes *gin.Context) {
 
 func (*StudentController) UpdateById(ReqAndRes *gin.Context) {
 	studentRepository := ReqAndRes.MustGet("studentRepository").(*repositories.StudentRepository)
-	var updateRequest requests.UpdateRequest[dto.Student]
+	var updateRequest requests.Request[dto.Student]
 	response := &utils.ResponseMessage{}
 	response.Fields = helpers.GetFields(updateRequest)
 
@@ -130,7 +131,7 @@ func (*StudentController) UpdateById(ReqAndRes *gin.Context) {
 		ReqAndRes.JSON(response.StatusCode, response)
 		return
 	} else {
-		fieldsError, err := helpers.ValidateStruct(updateRequest.NewData)
+		fieldsError, err := helpers.ValidateStruct(updateRequest.Data)
 
 		if err != nil {
 			response.StatusCode = http.StatusBadRequest
@@ -139,11 +140,11 @@ func (*StudentController) UpdateById(ReqAndRes *gin.Context) {
 			ReqAndRes.JSON(response.StatusCode, response)
 			return
 		} else {
-
+			id, _ := updateRequest.TargetId.Int64()
 			student := entities.Student{
-				ID:   uint64(updateRequest.TargetId),
-				Nim:  updateRequest.NewData.Nim,
-				Name: updateRequest.NewData.Name,
+				ID:   uint64(id),
+				Nim:  updateRequest.Data.Nim,
+				Name: updateRequest.Data.Name,
 			}
 
 			student, err = studentRepository.Save(&student)
@@ -158,6 +159,64 @@ func (*StudentController) UpdateById(ReqAndRes *gin.Context) {
 				response.StatusCode = http.StatusOK
 				response.Error = nil
 				response.Data = student
+				ReqAndRes.JSON(response.StatusCode, response)
+				return
+			}
+		}
+	}
+}
+
+func (*StudentController) DeleteById(ReqAndRes *gin.Context) {
+	studentRepository := ReqAndRes.MustGet("studentRepository").(*repositories.StudentRepository)
+	response := &utils.ResponseMessage{Fields: helpers.GetFields(requests.DeleteRequest{})}
+	deletedStudent := entities.Student{}
+	deleteRequest := requests.DeleteRequest{}
+
+	defer func() {
+		if err := recover(); err != nil {
+			response.StatusCode = http.StatusOK
+			response.Error = err
+			response.Data = nil
+			ReqAndRes.JSON(response.StatusCode, response)
+			return
+		}
+	}()
+
+	err := ReqAndRes.ShouldBindJSON(&deleteRequest)
+	if err != nil {
+		response.StatusCode = http.StatusBadRequest
+		response.Error = err.Error()
+		response.Data = nil
+		ReqAndRes.JSON(response.StatusCode, response)
+		return
+	} else {
+		fieldsError, err := helpers.ValidateStruct(deleteRequest)
+
+		if err != nil {
+			response.StatusCode = http.StatusBadRequest
+			response.Error = fieldsError
+			response.Data = nil
+			ReqAndRes.JSON(response.StatusCode, response)
+			return
+		} else {
+			id, _ := deleteRequest.TargetId.Int64()
+			deletedStudent, err = studentRepository.DeleteById(int(id))
+			if err != nil || deletedStudent.ID <= 0 {
+				response.StatusCode = http.StatusBadRequest
+
+				if deletedStudent.ID <= 0 {
+					response.Error = errors.New("data not found").Error()
+				} else {
+					response.Error = err
+				}
+
+				response.Data = nil
+				ReqAndRes.JSON(response.StatusCode, response)
+				return
+			} else {
+				response.StatusCode = http.StatusOK
+				response.Data = deletedStudent
+				response.Error = nil
 				ReqAndRes.JSON(response.StatusCode, response)
 				return
 			}
