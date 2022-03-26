@@ -18,6 +18,12 @@ func (s *StudentRepository) FindAll() (listStudent []entities.Student) {
 	database.GetDB().Find(&listStudent)
 	return
 }
-func (s *StudentRepository) Save() {
-
+func (s *StudentRepository) Save(entity interface{}) (student entities.Student, err error) {
+	err = database.GetDB().Save(entity).Error
+	student, _ = s.FindById(int(entity.(*entities.Student).ID))
+	return student, err
+}
+func (s *StudentRepository) FindById(id int) (student entities.Student, err error) {
+	err = database.GetDB().Where("id = ?", id).Find(&student).Error
+	return
 }

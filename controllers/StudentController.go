@@ -3,9 +3,12 @@ package controllers
 import (
 	"log"
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/irdaislakhuafa/BasicGinGormAndJwt/entities"
+	"github.com/irdaislakhuafa/BasicGinGormAndJwt/entities/dto"
+	"github.com/irdaislakhuafa/BasicGinGormAndJwt/helpers"
 	"github.com/irdaislakhuafa/BasicGinGormAndJwt/repositories"
 	"github.com/irdaislakhuafa/BasicGinGormAndJwt/utils"
 )
@@ -37,9 +40,11 @@ func (s *StudentController) GetAll(ReqAndRes *gin.Context) {
 	}
 }
 
-func (s *StudentController) Created(ReqAndReq *gin.Context) {
+func (s *StudentController) Created(ReqAndRes *gin.Context) {
+	studentRepository := ReqAndRes.MustGet("studentRepository").(*repositories.StudentRepository)
+
 	response := &utils.ResponseMessage{}
-	student := entities.Student{}
+	studentDto := dto.Student{}
 
 	defer func() {
 		if err := recover(); err != nil {
@@ -49,23 +54,43 @@ func (s *StudentController) Created(ReqAndReq *gin.Context) {
 				Error:      err,
 				Data:       nil,
 			}
+			ReqAndRes.JSON(response.StatusCode, response)
 		}
-		ReqAndReq.JSON(response.StatusCode, response)
 	}()
 
-	err := ReqAndReq.BindJSON(&student)
+	err := ReqAndRes.ShouldBindJSON(&studentDto)
+	studentDto.Nim = strings.Trim(studentDto.Nim, " ")
+	studentDto.Name = strings.Trim(studentDto.Name, " ")
+
 	if err != nil {
 		response = &utils.ResponseMessage{
 			StatusCode: http.StatusBadRequest,
 			Error:      err.Error(),
 			Data:       nil,
 		}
+		ReqAndRes.JSON(response.StatusCode, response)
+		return
 	} else {
-		response = &utils.ResponseMessage{
-			StatusCode: http.StatusOK,
-			Error:      nil,
-			Data:       student,
+
+		fieldError, err := helpers.ValidateStruct(studentDto)
+
+		if err != nil {
+			response = &utils.ResponseMessage{
+				StatusCode: http.StatusBadRequest,
+				Error:      fieldError,
+				Data:       nil,
+			}
+			ReqAndRes.JSON(response.StatusCode, response)
+			return
+		} else {
+			savedStudent, _ := studentRepository.Save(&entities.Student{Nim: studentDto.Nim, Name: studentDto.Name})
+			response = &utils.ResponseMessage{
+				StatusCode: http.StatusOK,
+				Error:      nil,
+				Data:       savedStudent,
+			}
+			ReqAndRes.JSON(response.StatusCode, response)
+			return
 		}
 	}
-
 }
