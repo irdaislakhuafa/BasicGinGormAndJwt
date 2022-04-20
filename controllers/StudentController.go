@@ -4,6 +4,7 @@ import (
 	"errors"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/irdaislakhuafa/BasicGinGormAndJwt/entities"
@@ -141,11 +142,15 @@ func (*StudentController) UpdateById(ReqAndRes *gin.Context) {
 			return
 		} else {
 			id, _ := updateRequest.TargetId.Int64()
-			student := entities.Student{
-				ID:   uint64(id),
-				Nim:  updateRequest.Data.Nim,
-				Name: updateRequest.Data.Name,
+			student, err := studentRepository.FindById(int(id))
+			if err != nil {
+				ReqAndRes.JSON(response.StatusCode, err)
+				return
 			}
+
+			student.Nim = updateRequest.Data.Nim
+			student.Name = updateRequest.Data.Name
+			student.UpdatedAt = time.Now()
 
 			student, err = studentRepository.Save(&student)
 
